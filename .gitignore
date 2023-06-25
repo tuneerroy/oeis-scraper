@@ -11,6 +11,7 @@ __pycache__/
 # Data
 *.json
 *.txt
+*.zip
 data/
 
 # Env

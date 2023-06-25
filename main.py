@@ -7,11 +7,14 @@ from bs4 import BeautifulSoup
 
 from utils import get_oeis_links
 
+RATE_LIMITER = asyncio.Semaphore(100)
+
 
 async def get_site_content(link: str) -> BeautifulSoup:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(link) as response:
-            return await response.text()
+    async with RATE_LIMITER:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link) as response:
+                return await response.text()
 
 
 def get_sequence(soup):
@@ -151,14 +154,16 @@ async def scrape_item(link: str, link_list: Set[str]):
 async def main(link_list: Set[str]):
     c = 0
 
-    async def dangerously_safe_wrapper(f, *args, **kwargs):
-        try:
-            await f(*args, **kwargs)
-        except:
-            pass
+    async def dangerously_safe_wrapper(f, link, link_list):
         nonlocal c
-        c += 1
-        print("Downloading File FooFile.txt [%d]\r" % c, end="")
+        try:
+            await f(link, link_list)
+            c += 1
+        except Exception as e:
+            print(f"Error with {link}")
+            print(e)
+            pass
+        print("Succeeded [%d]\r" % c, end="")
 
     curr_list = set()
     while curr_list != link_list:
